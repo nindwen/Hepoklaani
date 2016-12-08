@@ -1,13 +1,17 @@
 use std::net::{TcpListener, TcpStream};
 use std::io::{Read, BufRead, Write, BufReader, Error};
-use std::result;
-use std::thread;
-use std::i64;
+use std::{result, thread, i64, str};
 
+#[cfg(debug_assertions)]
+static DOMAIN: &'static str = "localhost:8086";
+
+#[cfg(not(debug_assertions))]
+static DOMAIN: &'static str = "hepoklaani.usvs.xyz";
 
 fn handle_client(mut stream: TcpStream) -> Result<String, Error> {
     let mut reader = BufReader::new(stream);
     let mut request = String::new();
+    let mut requestBody = String::new();
 
     for line in reader.by_ref().lines() {
         let mut current = header_mutate(line?);
@@ -18,6 +22,26 @@ fn handle_client(mut stream: TcpStream) -> Result<String, Error> {
             break;
         }
     }
+
+    let mut startPos: usize = 0;
+    let contentLength = request.find("Content-Length")
+        .and_then(|pos| {
+            startPos = pos;
+            request[pos..].find("\r\n")
+        })
+    .and_then(|endPos| {
+        request[startPos..endPos]
+            .parse::<usize>().ok()
+    }).unwrap_or(0);
+
+    let requestBodyVec = reader.get_ref()
+        .bytes()
+        .take(contentLength)
+        .map(|x| x.unwrap_or(0))
+        .collect::<Vec<_>>();
+    let requestBody = str::from_utf8(&requestBodyVec)
+        .unwrap_or("");
+    request += &requestBody;
 
     let mut connection = TcpStream::connect("bioklaani.fi:80").unwrap();
     //let mut connection = TcpStream::connect("localhost:8082").unwrap();
@@ -37,9 +61,9 @@ fn header_mutate(line: String) -> String {
     if line.contains("Accept-Encoding") {
         "Accept-Encoding: chunked".to_string()
     } else if line.contains("Transfer-Encoding") {
-        "Transfer-Encoding: identity".to_string()
+        "Transfer-Encoding: chunked".to_string()
     } else {
-        line.replace("localhost:8081","bioklaani.fi")
+        line.replace(DOMAIN,"bioklaani.fi")
     }
 }
 
@@ -57,7 +81,7 @@ fn send_response(mut stream: TcpStream, response: String) {
     let mut body = String::new();
     for section in bodySections {
         let newSection = section
-            .replace("bioklaani.fi","localhost:8081")
+            .replace("bioklaani.fi",DOMAIN)
             .replace("Bio-Klaani","Hepoklaani")
             .replace("Guardian","Hevordian")
             .replace("Pave","Hevo")
@@ -90,7 +114,7 @@ fn send_response(mut stream: TcpStream, response: String) {
     body += "\r\n0\r\n\r\n";
 
     let mut header = headerAndBody[0]
-        .replace("bioklaani.fi","localhost:8081");
+        .replace("bioklaani.fi",DOMAIN);
     header.push_str("\r\n");
     //header.push_str(&("\r\nContent-Length: ".to_string() + &body.len().to_string() + "\r\n"));
 
@@ -100,7 +124,7 @@ fn send_response(mut stream: TcpStream, response: String) {
 }
 
 fn main() {
-    let listener = TcpListener::bind("127.0.0.1:8081").unwrap();
+    let listener = TcpListener::bind("127.0.0.1:8086").unwrap();
 
     for stream in listener.incoming() {
         match stream {
