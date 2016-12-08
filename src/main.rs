@@ -60,8 +60,24 @@ fn send_response(mut stream: TcpStream, response: String) {
             .replace("bioklaani.fi","localhost:8081")
             .replace("Bio-Klaani","Hepoklaani")
             .replace("Guardian","Hevordian")
-            .replace("Pave","Hepo")
+            .replace("Pave","Hevo")
+            .replace("MaKe@nurkka|_.)","HePo@nurkka|_.)")
+            .replace("Kerosiinipelle","Heporillipelle")
+            .replace("Igor","Hepor")
+            .replace("Kapura","Hepura")
+            .replace("Keetongu","Heepongu")
+            .replace("Manfred","Horsfred")
+            .replace("susemppu","Hevonen")
+            .replace("Don","HooKoo")
+            .replace("Klaanon","Hevoset the fanfic")
+            .replace("Klaanilehti","Hevossanomat")
+            .replace("ELKOM","SUURI HEVONEN")
+            .replace("Meistä","Hevosista")
+            .replace("Baten","Hevosen")
+            .replace("Bate","Hevonen")
             .replace("Matoro TBS","Heporo TBS")
+            .replace("Peelo","Heepo")
+            .replace("img src=\"./download/file.php?avatar=" ,"img src=\"https://files.nindwen.blue/hepoklaani/hepoava.png\" alt=\"")
             .replace("/headers/","https://files.nindwen.blue/hepoklaani/hepoklaani.png");
 
         // Chunk information
@@ -69,10 +85,9 @@ fn send_response(mut stream: TcpStream, response: String) {
         body += &format!("{:x}", newSection.len());
         body += "\r\n";
         body += &newSection;
-        body += "\r\n";
     }
     // Terminating chunk
-    body += "0\r\n\r\n";
+    body += "\r\n0\r\n\r\n";
 
     let mut header = headerAndBody[0]
         .replace("bioklaani.fi","localhost:8081");
