@@ -1,6 +1,8 @@
 use std::net::{TcpListener, TcpStream};
 use std::io::{Read, BufRead, Write, BufReader, Error};
 use std::{result, thread, i64, str};
+extern crate regex;
+use regex::Regex;
 
 #[cfg(debug_assertions)]
 static DOMAIN: &'static str = "localhost:8086";
@@ -22,6 +24,8 @@ fn handle_client(mut stream: TcpStream) -> Result<String, Error> {
         }
     }
 
+    println!("Request:\n{}",request);
+
     let mut startPos: usize = 0;
     let contentLength = request.find("Content-Length")
         .and_then(|pos| {
@@ -34,20 +38,18 @@ fn handle_client(mut stream: TcpStream) -> Result<String, Error> {
         slice.parse::<usize>().ok()
     }).unwrap_or(0);
 
+    println!("Content-Length:\n{}",contentLength);
 
-    let requestBodyVec = reader.get_ref()
-        .bytes()
-        .take(contentLength)
-        .map(|x| x.unwrap_or(0))
-        .collect::<Vec<_>>();
-    let requestBody = str::from_utf8(&requestBodyVec)
-        .unwrap_or("");
+    let mut requestBody = String::new();
+    reader.by_ref()
+        .take(contentLength as u64)
+        .read_line(&mut requestBody).unwrap();
+
     println!("ContentLength: {}, body: \n{}\n---\n",contentLength,requestBody);
     request += &requestBody;
 
     let mut connection = TcpStream::connect("bioklaani.fi:80").unwrap();
 
-    println!("{}",request);
     connection.write_all(request.as_bytes())?;
     connection.flush()?;
     connection.shutdown(std::net::Shutdown::Write);
@@ -82,16 +84,17 @@ fn send_response(mut stream: TcpStream, resp: Vec<u8>) {
 
             let mut body = String::new();
 
-            if (header.contains("Content-Length")) {
+            if header.contains("Content-Length") {
                 let (_, tail) = headerAndBody.split_at(1);
-                body = tail.iter().fold(String::new(), |cat, x| cat + x);
+                body = contentReplacements(tail.iter().fold(String::new(), |cat, x| cat + x));
                 body += "\r\n";
 
                 header.push_str(&(
                         "\r\nContent-Length: ".to_string() + &body.len().to_string())
                     .to_string());
                 body = "\r\n".to_string() + &body;
-            } else {
+
+            } else { //Chunked
                 let bodySections = headerAndBody[1]
                     .split("\r\n")
                     // Filter away the sections with chunk length
@@ -125,7 +128,8 @@ fn send_response(mut stream: TcpStream, resp: Vec<u8>) {
 }
 
 fn contentReplacements(content: String) -> String {
-    content
+    let css_regex = Regex::new(r"#(?P<r>[A-Fa-f0-9]{2})(?P<g>[A-Fa-f0-9]{2})(?P<b>[A-Fa-f0-9]{2});").unwrap();
+    css_regex.replace_all(&content, "#$b$g$r; /* changed */")
         .replace("bioklaani.fi",DOMAIN)
         .replace("Bio-Klaani","Hepoklaani")
         .replace("Klaanon","Hevoset the fanfic")
@@ -133,31 +137,39 @@ fn contentReplacements(content: String) -> String {
         .replace("Bio-Logi","Heppapäiväkirja")
         .replace("Guardian","Shit Biscuit")
         .replace("Don","HooKoo")
+        .replace("Matoro TBS","Warhistory Sparklehoof")
         .replace("MaKe@nurkka|_.)","Hepo@talli|🐎")
         .replace("Kerosiinipelle","Heporinttipelle")
         .replace("Igor","Hegor")
-        .replace("Kapura","Hepura")
+        .replace("Kapura","Reptiliaanihevonen")
         .replace("Keetongu","Heevongu")
         .replace("Manfred","Horsfred")
-        .replace("susemppu","Hevonen")
-        .replace("Nenya","Ponya")
-        .replace("Visokki","Hepokki")
+        .replace("Nenya","Lumiharja")
+        .replace("Visokki","Kahdeksanjalkainen hevonen")
         .replace("Umbra","Dr.U")
         .replace("Dr.U","Heppatohtori")
+        .replace("Tawa","Menkää Nukkumaan")
         .replace("Snowman","Snowie")
         .replace("Snowie","Lumihevonen")
         .replace("Killjoy","Horsejoy")
-        .replace("Domek the light one","Valohevonen")
-        .replace("Pave","Hevo")
+        .replace("Domek the light one","Domek")
+        .replace("Domek","Heppataikatyttö")
+        .replace("Pave","Ravitutkija")
         .replace("Suga","Heavy Metal Poica")
+        .replace("Admin","Alfahevonen")
+        .replace("Mode","Hevostenhoitaja")
+        .replace("admin","alfahevonen")
+        .replace("mode","hevostenhoitaja")
         .replace("ELKOM","SUURI HEVONEN")
         .replace("Meistä","Hevosista")
         .replace("Baten","Hevosen")
         .replace("Bate","Hevonen")
-        .replace("Matoro TBS","Warhistory Sparklehoof")
+        .replace("susemppu","Hevonen")
         .replace("Peelo","Heepo")
         .replace("img src=\"./download/file.php?avatar=" ,"img src=\"https://files.nindwen.blue/hepoklaani/hepoava.png\" alt=\"")
         .replace("/headers/","https://files.nindwen.blue/hepoklaani/hepoklaani.png")
+        .replace("/images/background2.png","https://files.nindwen.blue/hepoklaani/unicorn_bg.gif")
+        .to_string()
 }
 
 
@@ -168,10 +180,10 @@ fn main() {
         match stream {
             Ok(stream) => {
                 thread::spawn(|| {
-                    handle_client(stream);
+                    let _ = handle_client(stream);
                 });
             }
-            Err(e) => { }
+            Err(_) => { }
         }
     }
 }
