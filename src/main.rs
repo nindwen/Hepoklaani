@@ -42,6 +42,7 @@ fn handle_client(mut stream: TcpStream) -> Result<String, Error> {
         .collect::<Vec<_>>();
     let requestBody = str::from_utf8(&requestBodyVec)
         .unwrap_or("");
+    println!("ContentLength: {}, body: \n{}\n---\n",contentLength,requestBody);
     request += &requestBody;
 
     let mut connection = TcpStream::connect("bioklaani.fi:80").unwrap();
@@ -75,68 +76,90 @@ fn send_response(mut stream: TcpStream, resp: Vec<u8>) {
             let response = resp.to_string();
 
             let headerAndBody: Vec<_> = response.split("\r\n\r\n").collect();
-            let bodySections = headerAndBody[1]
-                .split("\r\n")
-                .filter(|section| {
-                    match i64::from_str_radix(section, 16) {
-                        Ok(size) => false,
-                        Err(_) => true,
-                    }
-                });
-
-            let mut body = String::new();
-            for section in bodySections {
-                let newSection = section
-                    .replace("bioklaani.fi",DOMAIN)
-                    .replace("Bio-Klaani","Hepoklaani")
-                    .replace("Guardian","Hevordian")
-                    .replace("Pave","Hevo")
-                    .replace("MaKe@nurkka|_.)","HePo@nurkka|_.)")
-                    .replace("Kerosiinipelle","Heporillipelle")
-                    .replace("Igor","Hepor")
-                    .replace("Kapura","Hepura")
-                    .replace("Keetongu","Heepongu")
-                    .replace("Manfred","Horsfred")
-                    .replace("susemppu","Hevonen")
-                    .replace("Don","HooKoo")
-                    .replace("Nenya","Rokko")
-                    .replace("Visokki","Hepokki")
-                    .replace("Dr.U","Dr.H")
-                    .replace("Snowie","Lumihevonen")
-                    .replace("Killjoy","Horsejoy")
-                    .replace("Domek the light one","Valohevonen")
-                    .replace("Klaanon","Hevoset the fanfic")
-                    .replace("Klaanilehti","Hevossanomat")
-                    .replace("ELKOM","SUURI HEVONEN")
-                    .replace("Meistä","Hevosista")
-                    .replace("Baten","Hevosen")
-                    .replace("Bate","Hevonen")
-                    .replace("Matoro TBS","Historiahirnahdus")
-                    .replace("Peelo","Heepo")
-                    .replace("img src=\"./download/file.php?avatar=" ,"img src=\"https://files.nindwen.blue/hepoklaani/hepoava.png\" alt=\"")
-                    .replace("/headers/","https://files.nindwen.blue/hepoklaani/hepoklaani.png");
-
-                // Chunk information
-                body += "\r\n";
-                body += &format!("{:x}", newSection.len());
-                body += "\r\n";
-                body += &newSection;
-            }
-            // Terminating chunk
-            body += "\r\n0\r\n\r\n";
 
             let mut header = headerAndBody[0]
                 .replace("bioklaani.fi",DOMAIN);
-            header.push_str("\r\n");
 
+            let mut body = String::new();
+
+            if (header.contains("Content-Length")) {
+                let (_, tail) = headerAndBody.split_at(1);
+                body = tail.iter().fold(String::new(), |cat, x| cat + x);
+                body += "\r\n";
+
+                header.push_str(&(
+                        "\r\nContent-Length: ".to_string() + &body.len().to_string())
+                    .to_string());
+                body = "\r\n".to_string() + &body;
+            } else {
+                let bodySections = headerAndBody[1]
+                    .split("\r\n")
+                    // Filter away the sections with chunk length
+                    .filter(|section| {
+                        match i64::from_str_radix(section, 16) {
+                            Ok(size) => false,
+                            Err(_) => true,
+                        }
+                    });
+
+                for section in bodySections {
+                    let newSection = contentReplacements(section.to_string());
+
+                    // Chunk information
+                    body += "\r\n";
+                    body += &format!("{:x}", newSection.len());
+                    body += "\r\n";
+                    body += &newSection;
+                }
+                // Terminating chunk
+                body += "\r\n0\r\n\r\n";
+            }
+
+            header.push_str("\r\n");
             let response = header + &body;
-            println!("{}",response);
             response.into_bytes()
         }
         Err(_) => resp,
     };
     stream.write_all(&bytes).unwrap();
 }
+
+fn contentReplacements(content: String) -> String {
+    content
+        .replace("bioklaani.fi",DOMAIN)
+        .replace("Bio-Klaani","Hepoklaani")
+        .replace("Klaanon","Hevoset the fanfic")
+        .replace("Klaanilehti","Hevossanomat")
+        .replace("Bio-Logi","Heppapäiväkirja")
+        .replace("Guardian","Shit Biscuit")
+        .replace("Don","HooKoo")
+        .replace("MaKe@nurkka|_.)","Hepo@talli|🐎")
+        .replace("Kerosiinipelle","Heporinttipelle")
+        .replace("Igor","Hegor")
+        .replace("Kapura","Hepura")
+        .replace("Keetongu","Heevongu")
+        .replace("Manfred","Horsfred")
+        .replace("susemppu","Hevonen")
+        .replace("Nenya","Ponya")
+        .replace("Visokki","Hepokki")
+        .replace("Umbra","Dr.U")
+        .replace("Dr.U","Heppatohtori")
+        .replace("Snowman","Snowie")
+        .replace("Snowie","Lumihevonen")
+        .replace("Killjoy","Horsejoy")
+        .replace("Domek the light one","Valohevonen")
+        .replace("Pave","Hevo")
+        .replace("Suga","Heavy Metal Poica")
+        .replace("ELKOM","SUURI HEVONEN")
+        .replace("Meistä","Hevosista")
+        .replace("Baten","Hevosen")
+        .replace("Bate","Hevonen")
+        .replace("Matoro TBS","Warhistory Sparklehoof")
+        .replace("Peelo","Heepo")
+        .replace("img src=\"./download/file.php?avatar=" ,"img src=\"https://files.nindwen.blue/hepoklaani/hepoava.png\" alt=\"")
+        .replace("/headers/","https://files.nindwen.blue/hepoklaani/hepoklaani.png")
+}
+
 
 fn main() {
     let listener = TcpListener::bind("127.0.0.1:8086").unwrap();
