@@ -1,6 +1,6 @@
 use std::net::{TcpListener, TcpStream};
 use std::io::{Read, BufRead, Write, BufReader, Error};
-use std::{result, thread, i64, str};
+use std::{thread, i64, str};
 extern crate regex;
 use regex::Regex;
 
@@ -10,13 +10,13 @@ static DOMAIN: &'static str = "localhost:8086";
 #[cfg(not(debug_assertions))]
 static DOMAIN: &'static str = "hepoklaani.usvs.xyz";
 
-fn handle_client(mut stream: TcpStream) -> Result<String, Error> {
+fn handle_client(stream: TcpStream) -> Result<String, Error> {
     let mut reader = BufReader::new(stream);
     let mut request = String::new();
-    let mut requestBody = String::new();
+    let mut request_body = String::new();
 
     for line in reader.by_ref().lines() {
-        let mut current = header_mutate(line?);
+        let current = header_mutate(line?);
         request += &current;
         request += "\r\n";
         if current == "" {
@@ -26,33 +26,32 @@ fn handle_client(mut stream: TcpStream) -> Result<String, Error> {
 
     println!("Request:\n{}",request);
 
-    let mut startPos: usize = 0;
-    let contentLength = request.find("Content-Length")
+    let mut start_pos: usize = 0;
+    let content_length = request.find("Content-Length")
         .and_then(|pos| {
-            startPos = pos;
+            start_pos = pos;
             request[pos..].find("\r\n")
         })
-    .and_then(|endPos| {
-        let slice = &request[startPos+16..startPos + endPos];
+    .and_then(|end_pos| {
+        let slice = &request[start_pos+16..start_pos + end_pos];
 
         slice.parse::<usize>().ok()
     }).unwrap_or(0);
 
-    println!("Content-Length:\n{}",contentLength);
+    println!("Content-Length:\n{}",content_length);
 
-    let mut requestBody = String::new();
     reader.by_ref()
-        .take(contentLength as u64)
-        .read_line(&mut requestBody).unwrap();
+        .take(content_length as u64)
+        .read_line(&mut request_body).unwrap();
 
-    println!("ContentLength: {}, body: \n{}\n---\n",contentLength,requestBody);
-    request += &requestBody;
+    println!("ContentLength: {}, body: \n{}\n---\n",content_length,request_body);
+    request += &request_body;
 
     let mut connection = TcpStream::connect("bioklaani.fi:80").unwrap();
 
     connection.write_all(request.as_bytes())?;
     connection.flush()?;
-    connection.shutdown(std::net::Shutdown::Write);
+    let _ = connection.shutdown(std::net::Shutdown::Write);
 
     let mut response = vec![0; 0];
     connection.read_to_end(&mut response)?;
@@ -77,16 +76,16 @@ fn send_response(mut stream: TcpStream, resp: Vec<u8>) {
         Ok(resp) => {
             let response = resp.to_string();
 
-            let headerAndBody: Vec<_> = response.split("\r\n\r\n").collect();
+            let header_and_body: Vec<_> = response.split("\r\n\r\n").collect();
 
-            let mut header = headerAndBody[0]
+            let mut header = header_and_body[0]
                 .replace("bioklaani.fi",DOMAIN);
 
             let mut body = String::new();
 
             if header.contains("Content-Length") {
-                let (_, tail) = headerAndBody.split_at(1);
-                body = contentReplacements(tail.iter().fold(String::new(), |cat, x| cat + x));
+                let (_, tail) = header_and_body.split_at(1);
+                body = content_replacements(tail.iter().fold(String::new(), |cat, x| cat + x));
                 body += "\r\n";
 
                 header.push_str(&(
@@ -95,24 +94,24 @@ fn send_response(mut stream: TcpStream, resp: Vec<u8>) {
                 body = "\r\n".to_string() + &body;
 
             } else { //Chunked
-                let bodySections = headerAndBody[1]
+                let body_sections = header_and_body[1]
                     .split("\r\n")
                     // Filter away the sections with chunk length
                     .filter(|section| {
                         match i64::from_str_radix(section, 16) {
-                            Ok(size) => false,
+                            Ok(_) => false,
                             Err(_) => true,
                         }
                     });
 
-                for section in bodySections {
-                    let newSection = contentReplacements(section.to_string());
+                for section in body_sections {
+                    let new_section = content_replacements(section.to_string());
 
                     // Chunk information
                     body += "\r\n";
-                    body += &format!("{:x}", newSection.len());
+                    body += &format!("{:x}", new_section.len());
                     body += "\r\n";
-                    body += &newSection;
+                    body += &new_section;
                 }
                 // Terminating chunk
                 body += "\r\n0\r\n\r\n";
@@ -127,7 +126,7 @@ fn send_response(mut stream: TcpStream, resp: Vec<u8>) {
     stream.write_all(&bytes).unwrap();
 }
 
-fn contentReplacements(content: String) -> String {
+fn content_replacements(content: String) -> String {
     let css_regex = Regex::new(r"#(?P<r>[A-Fa-f0-9]{2})(?P<g>[A-Fa-f0-9]{2})(?P<b>[A-Fa-f0-9]{2});").unwrap();
     css_regex.replace_all(&content, "#$b$g$r; /* changed */")
         .replace("bioklaani.fi",DOMAIN)
