@@ -14,6 +14,20 @@ pub fn header_mutate(line: String) -> String {
     }
 }
 
+pub fn parse_content_length(request: &String) -> usize {
+    let mut start_pos: usize = 0;
+    request.find("Content-Length")
+        .and_then(|pos| {
+            start_pos = pos;
+            request[pos..].find("\r\n")
+        })
+    .and_then(|end_pos| {
+        let slice = &request[start_pos+16..start_pos + end_pos];
+
+        slice.parse::<usize>().ok()
+    }).unwrap_or(0)
+}
+
 // This transforms the response from remote,
 // to the one we will send to the client
 pub fn form_response(resp: Vec<u8>) -> Vec<u8> {
@@ -28,10 +42,10 @@ pub fn form_response(resp: Vec<u8>) -> Vec<u8> {
             let mut header = header_and_body[0]
                 .replace("bioklaani.fi",DOMAIN);
 
-            let mut body = String::new();
+            let mut body;
             let (_, tail) = header_and_body.split_at(1);
             let raw_body = replacements::content_replace(
-                tail.join("\r\n")
+                tail.join("")
                 );
 
             // bioklaani.fi serves usually with 
@@ -52,28 +66,7 @@ pub fn form_response(resp: Vec<u8>) -> Vec<u8> {
                 body = "\r\n".to_string() + &body;
 
             } else { // Chunked
-                let body_sections = raw_body
-                    .split("\r\n")
-                    // Filter away the sections with chunk length
-                    // We will calculate them ourselves
-                    .filter(|section| {
-                        match i64::from_str_radix(section, 16) {
-                            Ok(_) => false,
-                            Err(_) => true,
-                        }
-                    });
-
-                for section in body_sections {
-                    let new_section = section.to_string();
-
-                    // Chunk information
-                    body += "\r\n";
-                    body += &format!("{:x}", new_section.len());
-                    body += "\r\n";
-                    body += &new_section;
-                }
-                // Terminating chunk
-                body += "\r\n0\r\n\r\n";
+                body = chunked_encode(raw_body);
             }
 
             header.push_str("\r\n");
@@ -82,4 +75,32 @@ pub fn form_response(resp: Vec<u8>) -> Vec<u8> {
         }
         Err(_) => resp,
     }
+}
+
+fn chunked_encode(body: String) -> String {
+    let mut encoded = String::new();
+    let body_sections = body
+        .split("\r\n")
+        // Filter away the sections with chunk length
+        // We will calculate them ourselves
+        .filter(|section| {
+            match i64::from_str_radix(section, 16) {
+                Ok(_) => false,
+                Err(_) => true,
+            }
+        });
+
+    for section in body_sections {
+        let new_section = section.to_string();
+
+        // Chunk information
+        encoded += "\r\n";
+        encoded += &format!("{:x}", new_section.len());
+        encoded += "\r\n";
+        encoded += &new_section;
+    }
+    // Terminating chunk
+    encoded += "\r\n0\r\n\r\n";
+
+    encoded
 }

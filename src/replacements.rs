@@ -55,13 +55,26 @@ pub fn content_replace(content: String) -> String {
         .replace("Kyösti","Hevonen Karjalasta")
         .replace("Taiksie","Avoshedmin")
         .replace("Jake","Elektroninen hevonen")
-        .replace("BD","Melko Ei Hevonen")
+        // This breaks the code
+        //.replace("BD","Melko Ei Hevonen")
         .replace("Peelo","Miten hevonen edes housut")
         .replace("Blezer","Hevonen joka on oppinut hallitsemaan magiaa")
         .replace("Meistä","Hevosista")
         .replace("Baten","Hevosen")
         .replace("Bate","Hevonen")
         .replace("susemppu","Hevonen")
+
+        //Klaanon
+        .replace("Nimda","MacPorkkana")
+        .replace("Avde","Ilkeä hevonen")
+        .replace("toa","sotaratsu")
+        .replace("matoran","pikkuinen hevonen")
+        .replace("turaga","viisas hevonen")
+        .replace("ZMA","Zorak")
+        .replace("Zorak","Orkesterinjohtajahevonen")
+        .replace("Feterr","Heporr")
+        
+
 
         // Images
         .replace("img src=\"./download/file.php?avatar=" ,"img src=\"https://files.nindwen.blue/hepoklaani/hepoava.png\" alt=\"")
