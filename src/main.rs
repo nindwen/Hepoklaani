@@ -31,7 +31,7 @@ fn handle_client(stream: TcpStream) -> Result<(), Error> {
 
     // Read request body
     // We assume it's a single line
-    let _  = client_connection.by_ref()
+    let _ = client_connection.by_ref()
         .take(content_length as u64)
         .read_line(&mut request_body);
 
@@ -65,13 +65,13 @@ fn main() {
                     match handle_client(stream) {
                         Ok(_) => {}
                         Err(e) => {
-                            println!("Thread returned with error: {}", e); 
+                            println!("Thread returned with error: {}", e);
                         }
                     }
                 });
             }
-            Err(e) => { 
-                println!("Error on incoming connection: {}", e); 
+            Err(e) => {
+                println!("Error on incoming connection: {}", e);
             }
         }
     }

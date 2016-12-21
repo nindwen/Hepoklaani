@@ -4,7 +4,8 @@ use self::regex::Regex;
 // The magic lives here
 pub fn content_replace(content: String) -> String {
     // R G B => B G R for nice brown/pinkish theme
-    let css_regex = Regex::new(r"#(?P<r>[A-Fa-f0-9]{2})(?P<g>[A-Fa-f0-9]{2})(?P<b>[A-Fa-f0-9]{2});").unwrap();
+    let css_regex =
+        Regex::new(r"#(?P<r>[A-Fa-f0-9]{2})(?P<g>[A-Fa-f0-9]{2})(?P<b>[A-Fa-f0-9]{2});").unwrap();
     let css_replaced = css_regex.replace_all(&content, "#$b$g$r;");
 
     // HEVOSIA
@@ -73,13 +74,14 @@ pub fn content_replace(content: String) -> String {
         .replace("ZMA","Zorak")
         .replace("Zorak","Orkesterinjohtajahevonen")
         .replace("Feterr","Heporr")
-        
-
 
         // Images
-        .replace("img src=\"./download/file.php?avatar=" ,"img src=\"https://files.nindwen.blue/hepoklaani/hepoava.png\" alt=\"")
-        .replace("/headers/","https://files.nindwen.blue/hepoklaani/hepoklaani.png")
-        .replace("/images/background2.png","https://files.nindwen.blue/hepoklaani/unicorn_bg.gif")
+        .replace("img src=\"./download/file.php?avatar=",
+                 "img src=\"https://files.nindwen.blue/hepoklaani/hepoava.png\" alt=\"")
+        .replace("/headers/",
+                 "https://files.nindwen.blue/hepoklaani/hepoklaani.png")
+        .replace("/images/background2.png",
+                 "https://files.nindwen.blue/hepoklaani/unicorn_bg.gif")
         .to_string()
 }
 

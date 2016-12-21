@@ -10,7 +10,7 @@ pub fn header_mutate(line: String) -> String {
     } else if line.contains("Transfer-Encoding") {
         "Transfer-Encoding: chunked".to_string()
     } else {
-        line.replace(DOMAIN,"bioklaani.fi")
+        line.replace(DOMAIN, "bioklaani.fi")
     }
 }
 
@@ -21,11 +21,12 @@ pub fn parse_content_length(request: &String) -> usize {
             start_pos = pos;
             request[pos..].find("\r\n")
         })
-    .and_then(|end_pos| {
-        let slice = &request[start_pos+16..start_pos + end_pos];
+        .and_then(|end_pos| {
+            let slice = &request[start_pos + 16..start_pos + end_pos];
 
-        slice.parse::<usize>().ok()
-    }).unwrap_or(0)
+            slice.parse::<usize>().ok()
+        })
+        .unwrap_or(0)
 }
 
 // This transforms the response from remote,
@@ -35,20 +36,16 @@ pub fn form_response(resp: Vec<u8>) -> Vec<u8> {
     // Otherwise return it as-is (e.g images)
     match str::from_utf8(&resp.clone()) {
         Ok(response) => {
-            let header_and_body: Vec<_> = response
-                .split("\r\n\r\n")
+            let header_and_body: Vec<_> = response.split("\r\n\r\n")
                 .collect();
 
-            let mut header = header_and_body[0]
-                .replace("bioklaani.fi",DOMAIN);
+            let mut header = header_and_body[0].replace("bioklaani.fi", DOMAIN);
 
             let mut body;
             let (_, tail) = header_and_body.split_at(1);
-            let raw_body = replacements::content_replace(
-                tail.join("")
-                );
+            let raw_body = replacements::content_replace(tail.join(""));
 
-            // bioklaani.fi serves usually with 
+            // bioklaani.fi serves usually with
             // Content-Encoding: Chunked,
             // but wordpress-subdomains insist on Identity.
             // Identity = plain, requires Content-Length
@@ -59,13 +56,12 @@ pub fn form_response(resp: Vec<u8>) -> Vec<u8> {
                 // After replacements, Content-Length may
                 // be incorrect. Luckily we can simply append
                 // the correct bytecount to headers.
-                header.push_str(&(
-                        "\r\nContent-Length: ".to_string() 
-                        + &body.len().to_string()
-                        ).to_string());
+                header.push_str(&("\r\nContent-Length: ".to_string() + &body.len().to_string())
+                    .to_string());
                 body = "\r\n".to_string() + &body;
 
-            } else { // Chunked
+            } else {
+                // Chunked
                 body = chunked_encode(raw_body);
             }
 
