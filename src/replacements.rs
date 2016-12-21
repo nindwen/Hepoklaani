@@ -5,7 +5,11 @@ use self::regex::Regex;
 pub fn content_replace(content: String) -> String {
     // R G B => B G R for nice brown/pinkish theme
     let css_regex = Regex::new(r"#(?P<r>[A-Fa-f0-9]{2})(?P<g>[A-Fa-f0-9]{2})(?P<b>[A-Fa-f0-9]{2});").unwrap();
-    css_regex.replace_all(&content, "#$b$g$r;")
+    let css_replaced = css_regex.replace_all(&content, "#$b$g$r;");
+
+    // HEVOSIA
+    let rank_regex = Regex::new(r"/images/ranks/.*\.png").unwrap();
+    rank_regex.replace_all(&css_replaced, "/images/ranks/hevosia.png")
 
         // General
         .replace("bioklaani.fi",::DOMAIN)
@@ -33,7 +37,7 @@ pub fn content_replace(content: String) -> String {
         .replace("Visu","Visokki")
         .replace("Visokki","Kahdeksanjalkainen hevonen")
         .replace("Manu","Manfred")
-        .replace("Manfred","Horsfred")
+        .replace("Manfred","Pink Fluffy Unicorn")
         .replace("Umbra","Dr.U")
         .replace("Dr.U","Heppatohtori")
         .replace("Tawa","Menkää Nukkumaan")
@@ -47,6 +51,13 @@ pub fn content_replace(content: String) -> String {
         .replace("Paavo12","Pave")
         .replace("Pave","Ravitutkija")
         .replace("Suga","Heavy Metal Poica")
+        .replace("Ju0pp0","Janoinen hevonen")
+        .replace("Kyösti","Hevonen Karjalasta")
+        .replace("Taiksie","Avoshedmin")
+        .replace("Jake","Elektroninen hevonen")
+        .replace("BD","Melko Ei Hevonen")
+        .replace("Peelo","Miten hevonen edes housut")
+        .replace("Blezer","Hevonen joka on oppinut hallitsemaan magiaa")
         .replace("Meistä","Hevosista")
         .replace("Baten","Hevosen")
         .replace("Bate","Hevonen")
