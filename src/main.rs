@@ -1,8 +1,7 @@
+mod replacements;
 use std::net::{TcpListener, TcpStream};
 use std::io::{Read, BufRead, Write, BufReader, Error};
 use std::{thread, i64, str};
-extern crate regex;
-use regex::Regex;
 
 #[cfg(debug_assertions)]
 static DOMAIN: &'static str = "localhost:8086";
@@ -88,7 +87,7 @@ fn send_response(mut stream: TcpStream, resp: Vec<u8>) {
 
             let mut body = String::new();
             let (_, tail) = header_and_body.split_at(1);
-            let raw_body = content_replacements(
+            let raw_body = replacements::content_replace (
                 tail.iter().fold(String::new(), |cat, x| cat + x)
                 );
 
@@ -118,7 +117,7 @@ fn send_response(mut stream: TcpStream, resp: Vec<u8>) {
                     });
 
                 for section in body_sections {
-                    let new_section = content_replacements(section.to_string());
+                    let new_section = section.to_string();
 
                     // Chunk information
                     body += "\r\n";
@@ -138,68 +137,6 @@ fn send_response(mut stream: TcpStream, resp: Vec<u8>) {
     };
     stream.write_all(&bytes).unwrap();
 }
-
-// The magic lives here
-fn content_replacements(content: String) -> String {
-    // R G B => B G R for nice pinkish theme
-    let css_regex = Regex::new(r"#(?P<r>[A-Fa-f0-9]{2})(?P<g>[A-Fa-f0-9]{2})(?P<b>[A-Fa-f0-9]{2});").unwrap();
-    css_regex.replace_all(&content, "#$b$g$r; /* changed */")
-
-        // General
-        .replace("bioklaani.fi",DOMAIN)
-        .replace("Bio-Klaani","Hepoklaani")
-        .replace("Klaanon","Hevoset the fanfic")
-        .replace("Klaanilehti","Hevossanomat")
-        .replace("Bio-Logi","Heppapäiväkirja")
-        .replace("Admin","Alfahevonen")
-        .replace("Mode","Hevostenhoitaja")
-        .replace("admin","alfahevonen")
-        .replace("mode","hevostenhoitaja")
-        .replace("ELKOM","SUURI HEVONEN")
-
-        // Users
-        // (Some names are replaced multiple times,
-        // for example alt. nick -> primary nick -> horsefied nick)
-        .replace("Guardian","Shit Biscuit")
-        .replace("Don","HooKoo")
-        .replace("Matoro TBS","Matoro")
-        .replace("Matoro","Warhistory Sparklehoof")
-        .replace("MaKe@nurkka|_.)","Make")
-        .replace("Make","Hepo@talli|🐎")
-        .replace("Kerosiinipelle","Nanohep")
-        .replace("Igor","Hegor")
-        .replace("Kapura","Reptiliaanihevonen")
-        .replace("Tongu","Keetongu")
-        .replace("Keetongu","Aikahevonen")
-        .replace("Visu","Visokki")
-        .replace("Visokki","Kahdeksanjalkainen hevonen")
-        .replace("Manu","Manfred")
-        .replace("Manfred","Horsfred")
-        .replace("Umbra","Dr.U")
-        .replace("Dr.U","Heppatohtori")
-        .replace("Tawa","Menkää Nukkumaan")
-        .replace("Snowman","Snowie")
-        .replace("Snowie","Lumihevonen")
-        .replace("Killjoy","Horsejoy")
-        .replace("Nenya","Neny")
-        .replace("Neny","Lumiharja")
-        .replace("Domek the light one","Domek")
-        .replace("Domek","Heppataikatyttö")
-        .replace("Paavo12","Pave")
-        .replace("Pave","Ravitutkija")
-        .replace("Suga","Heavy Metal Poica")
-        .replace("Meistä","Hevosista")
-        .replace("Baten","Hevosen")
-        .replace("Bate","Hevonen")
-        .replace("susemppu","Hevonen")
-
-        // Images
-        .replace("img src=\"./download/file.php?avatar=" ,"img src=\"https://files.nindwen.blue/hepoklaani/hepoava.png\" alt=\"")
-        .replace("/headers/","https://files.nindwen.blue/hepoklaani/hepoklaani.png")
-        .replace("/images/background2.png","https://files.nindwen.blue/hepoklaani/unicorn_bg.gif")
-        .to_string()
-}
-
 
 fn main() {
     let listener = TcpListener::bind("127.0.0.1:8086").unwrap();
