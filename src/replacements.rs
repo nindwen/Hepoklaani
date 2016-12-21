@@ -5,7 +5,7 @@ use self::regex::Regex;
 pub fn content_replace(content: String) -> String {
     // R G B => B G R for nice brown/pinkish theme
     let css_regex = Regex::new(r"#(?P<r>[A-Fa-f0-9]{2})(?P<g>[A-Fa-f0-9]{2})(?P<b>[A-Fa-f0-9]{2});").unwrap();
-    css_regex.replace_all(&content, "#$b$g$r; /* changed */")
+    css_regex.replace_all(&content, "#$b$g$r;")
 
         // General
         .replace("bioklaani.fi",::DOMAIN)
@@ -57,4 +57,44 @@ pub fn content_replace(content: String) -> String {
         .replace("/headers/","https://files.nindwen.blue/hepoklaani/hepoklaani.png")
         .replace("/images/background2.png","https://files.nindwen.blue/hepoklaani/unicorn_bg.gif")
         .to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn css_replace() {
+        let test = "kissa lol #12ab89; lol".to_string();
+        let correct = "kissa lol #89ab12; lol".to_string();
+        assert_eq!(content_replace(test), correct);
+    }
+
+    #[test]
+    fn css_negative() {
+        let too_short = "#abcde;".to_string();
+        assert_eq!(content_replace(too_short.clone()), too_short);
+
+        let too_long = "#abcdef1;".to_string();
+        assert_eq!(content_replace(too_long.clone()), too_long);
+
+        let hashtag = "#vapaus; lisäksi lol".to_string();
+        assert_eq!(content_replace(hashtag.clone()), hashtag);
+
+        let nonhex = "#hklk54".to_string();
+        assert_eq!(content_replace(nonhex.clone()), nonhex);
+    }
+
+    #[test]
+    fn general() {
+        let test = "Bio-Klaanissa asuu ELKOM".to_string();
+        let correct = "Hepoklaanissa asuu SUURI HEVONEN".to_string();
+        assert_eq!(content_replace(test), correct);
+    }
+
+    #[test]
+    fn both() {
+        let test = "Bio-Klaanissa asuu ELKOM, sen lempiväri on: #66Ae8F;".to_string();
+        let correct = "Hepoklaanissa asuu SUURI HEVONEN, sen lempiväri on: #8FAe66;".to_string();
+        assert_eq!(content_replace(test), correct);
+    }
 }

@@ -10,7 +10,7 @@ static DOMAIN: &'static str = "localhost:8086";
 static DOMAIN: &'static str = "hepoklaani.usvs.xyz";
 
 // Handling single connection
-fn handle_client(stream: TcpStream) -> Result<String, Error> {
+fn handle_client(stream: TcpStream) -> Result<(), Error> {
     let mut reader = BufReader::new(stream);
     let mut request = String::new();
     let mut request_body = String::new();
@@ -39,15 +39,15 @@ fn handle_client(stream: TcpStream) -> Result<String, Error> {
     }).unwrap_or(0);
 
     // Read request body
-    // (We assume it's a single line)
-    reader.by_ref()
+    // We assume it's a single line
+    let _  = reader.by_ref()
         .take(content_length as u64)
-        .read_line(&mut request_body).unwrap();
+        .read_line(&mut request_body);
 
     request += &request_body;
 
     // Connect to remote
-    let mut connection = TcpStream::connect("bioklaani.fi:80").unwrap();
+    let mut connection = TcpStream::connect("bioklaani.fi:80")?;
 
     // Relay the request
     connection.write_all(request.as_bytes())?;
@@ -57,10 +57,10 @@ fn handle_client(stream: TcpStream) -> Result<String, Error> {
     // Send remote's response to client
     let mut response = vec![0; 0];
     connection.read_to_end(&mut response)?;
-    send_response(reader.into_inner(), response);
+    let bytes = form_response(response);
+    reader.into_inner().write_all(&bytes)?;
 
-    // Meow :3
-    Ok("miau".to_string())
+    Ok(())
 }
 
 // Client -> hepo header
@@ -74,10 +74,12 @@ fn header_mutate(line: String) -> String {
     }
 }
 
-fn send_response(mut stream: TcpStream, resp: Vec<u8>) {
+// This transforms the response from remote,
+// to the one we will send to the client
+fn form_response(resp: Vec<u8>) -> Vec<u8> {
     // If response if valid utf8, handle it
     // Otherwise return it as-is (e.g images)
-    let bytes = match str::from_utf8(&resp.clone()) {
+    match str::from_utf8(&resp.clone()) {
         Ok(resp) => {
             let response = resp.to_string();
             let header_and_body: Vec<_> = response.split("\r\n\r\n").collect();
@@ -87,8 +89,8 @@ fn send_response(mut stream: TcpStream, resp: Vec<u8>) {
 
             let mut body = String::new();
             let (_, tail) = header_and_body.split_at(1);
-            let raw_body = replacements::content_replace (
-                tail.iter().fold(String::new(), |cat, x| cat + x)
+            let raw_body = replacements::content_replace(
+                tail.join("\r\n")
                 );
 
             // bioklaani.fi serves usually with 
@@ -99,6 +101,9 @@ fn send_response(mut stream: TcpStream, resp: Vec<u8>) {
                 body = raw_body;
                 body += "\r\n";
 
+                // After replacements, Content-Length may
+                // be incorrect. Luckily we can simply append
+                // the correct bytecount to headers.
                 header.push_str(&(
                         "\r\nContent-Length: ".to_string() 
                         + &body.len().to_string()
@@ -109,6 +114,7 @@ fn send_response(mut stream: TcpStream, resp: Vec<u8>) {
                 let body_sections = raw_body
                     .split("\r\n")
                     // Filter away the sections with chunk length
+                    // We will calculate them ourselves
                     .filter(|section| {
                         match i64::from_str_radix(section, 16) {
                             Ok(_) => false,
@@ -134,8 +140,7 @@ fn send_response(mut stream: TcpStream, resp: Vec<u8>) {
             response.into_bytes()
         }
         Err(_) => resp,
-    };
-    stream.write_all(&bytes).unwrap();
+    }
 }
 
 fn main() {
@@ -146,10 +151,17 @@ fn main() {
         match stream {
             Ok(stream) => {
                 thread::spawn(|| {
-                    let _ = handle_client(stream);
+                    match handle_client(stream) {
+                        Ok(_) => {}
+                        Err(e) => {
+                            println!("Thread returned with error: {}", e); 
+                        }
+                    }
                 });
             }
-            Err(_) => { }
+            Err(e) => { 
+                println!("Error on incoming connection: {}", e); 
+            }
         }
     }
 }
