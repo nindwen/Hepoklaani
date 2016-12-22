@@ -73,7 +73,7 @@ pub fn form_response(resp: Vec<u8>) -> Vec<u8> {
     }
 }
 
-fn chunked_encode(body: String) -> String {
+pub fn chunked_encode(body: String) -> String {
     let mut encoded = String::new();
     let body_sections = body
         .split("\r\n")
@@ -99,4 +99,38 @@ fn chunked_encode(body: String) -> String {
     encoded += "\r\n0\r\n\r\n";
 
     encoded
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn content_length_correct() {
+        let test = "Headers\r\nContent-Length: 42\r\n\r\nBody".to_string();
+        assert_eq!(parse_content_length(&test), 42);
+    }
+
+    #[test]
+    fn chunked_encode_correct() {
+        let test = "\
+        0\r\n\
+        q\r\n\
+        0\r\n\
+        qw\r\n\
+        0\r\n\
+        qwe\r\n\
+        0".to_string();
+
+        let correct ="\r\n\
+        1\r\n\
+        q\r\n\
+        2\r\n\
+        qw\r\n\
+        3\r\n\
+        qwe\r\n\
+        0\r\n\r\n".to_string();
+
+        assert_eq!(chunked_encode(test), correct);
+    }
 }
