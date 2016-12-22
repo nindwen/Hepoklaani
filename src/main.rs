@@ -30,10 +30,9 @@ fn handle_client(stream: TcpStream) -> Result<(), Error> {
     let content_length = transforms::parse_content_length(&request);
 
     // Read request body
-    // We assume it's a single line
     let _ = client_connection.by_ref()
         .take(content_length as u64)
-        .read_line(&mut request_body);
+        .read_to_string(&mut request_body);
 
     request += &request_body;
 
