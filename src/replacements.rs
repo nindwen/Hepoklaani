@@ -5,7 +5,12 @@ use self::regex::Regex;
 pub fn content_replace(content: String) -> String {
     // R G B => B G R for nice brown/pinkish theme
     let css_regex =
-        Regex::new(r"#(?P<r>[A-Fa-f0-9]{2})(?P<g>[A-Fa-f0-9]{2})(?P<b>[A-Fa-f0-9]{2});").unwrap();
+        Regex::new(r"(?x)
+                   \#(?P<r>[A-Fa-f0-9]{2})
+                   (?P<g>[A-Fa-f0-9]{2})
+                   (?P<b>[A-Fa-f0-9]{2})
+                   ( !important)?;
+                   ").unwrap();
     let css_replaced = css_regex.replace_all(&content, "#$b$g$r;");
 
     // HEVOSIA
@@ -19,7 +24,7 @@ pub fn content_replace(content: String) -> String {
         .replace("Klaanilehti","Hevossanomat")
         .replace("Bio-Logi","Heppapäiväkirja")
         .replace("ELKOM","SUURI HEVONEN")
-        .replace("Kirjaudu sisään</a></h2>","Kirjaudu sisää</a></h2>Hepoklaanin taikahevoset huomauttaa että jos et täysin luota hepoklaanin taikahevosiin, kirjautuminen on teoriassa vaarallista. Boop.")
+        .replace("Kirjaudu sisään</a></h2>","Kirjaudu sisää</a></h2>Hepoklaanin taikahevoset muistuttaa että kirjautuminen hämärille sivuille toisen sivun tunnuksilla on yleisesti ottaen aika tyhmää/vaarallista/boop. Toisaalta taas se toimii joten pitäkää hauskaa.")
 
         // Users
         // (Some names are replaced multiple times,
@@ -51,6 +56,7 @@ pub fn content_replace(content: String) -> String {
         .replace("Domek","Heppataikatyttö")
         .replace("Paavo12","Pave")
         .replace("Pave","Ravitutkija")
+        .replace("suga","Suga")
         .replace("Suga","Heavy Metal Poica")
         .replace("Ju0pp0","Janoinen hevonen")
         .replace("Kyösti","Hevonen Karjalasta")
@@ -68,9 +74,15 @@ pub fn content_replace(content: String) -> String {
         //Klaanon
         .replace("Nimda","MacPorkkana")
         .replace("Avde","Ilkeä hevonen")
+        .replace("noita","taikahevonen")
+        .replace("noidan","taikahevosen")
+        .replace("noidaksi","taikahevoseksi")
         .replace("toa","sotaratsu")
         .replace("matoran","pikkuinen hevonen")
         .replace("turaga","viisas hevonen")
+        .replace("Toa","sotaratsu")
+        .replace("Matoran","pikkuinen hevonen")
+        .replace("Turaga","viisas hevonen")
         .replace("ZMA","Zorak")
         .replace("Zorak","Orkesterinjohtajahevonen")
         .replace("Feterr","Heporr")
@@ -82,6 +94,8 @@ pub fn content_replace(content: String) -> String {
                  "https://files.nindwen.blue/hepoklaani/hepoklaani.png")
         .replace("/images/background2.png",
                  "https://files.nindwen.blue/hepoklaani/unicorn_bg.gif")
+        .replace("/wp/wp-content/themes/klaanon/header-images/header.php",
+                 "https://files.nindwen.blue/hepoklaani/klaanon_header.png")
         .to_string()
 }
 
