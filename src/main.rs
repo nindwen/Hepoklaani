@@ -8,7 +8,7 @@ use std::{thread, str};
 static DOMAIN: &'static str = "localhost:8086";
 
 #[cfg(not(debug_assertions))]
-static DOMAIN: &'static str = "hepoklaani.usvs.xyz";
+static DOMAIN: &'static str = "bioklaani.horse";
 
 // Handling single connection
 fn handle_client(stream: TcpStream) -> Result<(), Error> {
