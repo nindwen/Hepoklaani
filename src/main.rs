@@ -30,9 +30,9 @@ fn handle_client(stream: TcpStream) -> Result<(), Error> {
     let content_length = transforms::parse_content_length(&request);
 
     // Read request body
-    let _ = client_connection.by_ref()
+    client_connection.by_ref()
         .take(content_length as u64)
-        .read_to_string(&mut request_body);
+        .read_to_string(&mut request_body)?;
 
     request += &request_body;
 
@@ -42,7 +42,7 @@ fn handle_client(stream: TcpStream) -> Result<(), Error> {
     // Relay the request
     remote_connection.write_all(request.as_bytes())?;
     remote_connection.flush()?;
-    let _ = remote_connection.shutdown(std::net::Shutdown::Write);
+    remote_connection.shutdown(std::net::Shutdown::Write)?;
 
     // Send remote's response to client
     let mut response = vec![0; 0];
